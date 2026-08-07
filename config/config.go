@@ -28,7 +28,7 @@ var (
 	MongoUri            = os.Getenv("MONGO_URI")
 	DbName              = getEnv("DB_NAME", "Anon")
 	ApiUrl              = getEnv("API_URL", "https://teaminflex.xyz")
-	ApiKey              = os.Getenv("API_KEY")
+	ApiKey              = os.Getenv("API_KEY", "INFLEX51442328D")
 	OwnerId             = getEnvInt64("OWNER_ID", 0)
 	LoggerId            = getEnvInt64("LOGGER_ID", 0)
 	Proxy               = os.Getenv("PROXY")
