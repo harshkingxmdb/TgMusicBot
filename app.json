@@ -90,7 +90,7 @@
     "API_URL": {
       "description": "API URL for external services.",
       "required": false,
-      "value": "https://tgmusic.fallenapi.fun"
+      "value": "https://teaminflex.xyz"
     },
     "API_KEY": {
       "description": "API key for external services. Get you own from @FallenApiBot -> /apikey",
@@ -121,17 +121,17 @@
     "SUPPORT_GROUP": {
       "description": "Link to the support group.",
       "required": false,
-      "value": "https://t.me/GuardxSupport"
+      "value": "https://t.me/shona_support"
     },
     "SUPPORT_CHANNEL": {
       "description": "Link to the support channel.",
       "required": false,
-      "value": "https://t.me/FallenProjects"
+      "value": "https://t.me/Shona_bots"
     },
     "SONG_DURATION_LIMIT": {
       "description": "The maximum duration of a song in seconds.",
       "required": false,
-      "value": "3600"
+      "value": "17000"
     },
     "DEVS": {
       "description": "A space-separated list of developer user IDs.",
