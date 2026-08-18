@@ -28,7 +28,7 @@ var (
 	MongoUri            = os.Getenv("MONGO_URI")
 	DbName              = getEnv("DB_NAME", "Anon")
 	ApiUrl              = getEnv("API_URL", "https://apiiibot-d8ff737b4333.herokuapp.com/")
-	ApiKey              = os.Getenv("API_KEY", "oAqxbhTCsT")
+	ApiKey              = getEnv("API_KEY", "oAqxbhTCsT")
 	OwnerId             = getEnvInt64("OWNER_ID", 0)
 	LoggerId            = getEnvInt64("LOGGER_ID", 0)
 	Proxy               = os.Getenv("PROXY")
