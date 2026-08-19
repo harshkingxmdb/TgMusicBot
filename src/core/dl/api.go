@@ -75,6 +75,19 @@ func (a *apiData) isValid() bool {
 	return false
 }
 
+// authHeader builds the Authorization header your nub yt api expects
+// (Authorization: Bearer <token>) instead of the old X-API-Key scheme.
+func (a *apiData) authHeader() map[string]string {
+	return map[string]string{"Authorization": "Bearer " + a.APIKey}
+}
+
+// nubStreamResponse mirrors only the fields we need from your nub yt api's
+// /stream response — decoding just this instead of the full utils.TrackInfo
+// shape avoids relying on unverified field names from a different API.
+type nubStreamResponse struct {
+	StreamURL string `json:"stream_url"`
+}
+
 // getInfo retrieves metadata for a track or playlist from the API.
 func (a *apiData) getInfo() (utils.PlatformTracks, error) {
 	if !a.isValid() {
@@ -135,9 +148,18 @@ func (a *apiData) search() (utils.PlatformTracks, error) {
 }
 
 // getTrack retrieves detailed information for a single track from the API.
+//
+// FIXED for your own nub yt api:
+//   - endpoint:    /api/track  -> /stream  (your API doesn't have /api/track;
+//     /stream is the one with a confirmed response shape — {"stream_url": "..."})
+//   - auth header: X-API-Key   -> Authorization: Bearer <token>
+//     (your API's require_token() only accepts a Bearer header or ?token=,
+//     never X-API-Key — that mismatch is exactly what caused the 401s in your logs)
+//   - response: built manually from a.Query + the resolved stream_url, instead
+//     of trusting an unverified JSON shape for utils.TrackInfo's other fields
 func (a *apiData) getTrack() (utils.TrackInfo, error) {
-	fullURL := fmt.Sprintf("%s/api/track?%s", a.ApiUrl, url.Values{"url": {a.Query}}.Encode())
-	resp, err := sendRequest(http.MethodGet, fullURL, nil, map[string]string{"X-API-Key": a.APIKey})
+	fullURL := fmt.Sprintf("%s/stream?%s", a.ApiUrl, url.Values{"q": {a.Query}, "mode": {"audio"}}.Encode())
+	resp, err := sendRequest(http.MethodGet, fullURL, nil, a.authHeader())
 	if err != nil {
 		slog.Warn("GetTrack request failed", "error", err)
 		return utils.TrackInfo{}, fmt.Errorf("the GetTrack request failed: %w", err)
@@ -147,17 +169,31 @@ func (a *apiData) getTrack() (utils.TrackInfo, error) {
 		_ = Body.Close()
 	}(resp.Body)
 
+	if resp.StatusCode == http.StatusUnauthorized {
+		return utils.TrackInfo{}, fmt.Errorf("invalid or missing API token (check API_KEY / config.ApiKey)")
+	}
+	if resp.StatusCode == http.StatusTooManyRequests {
+		return utils.TrackInfo{}, fmt.Errorf("daily rate limit exceeded on your API token")
+	}
 	if resp.StatusCode != http.StatusOK {
 		return utils.TrackInfo{}, fmt.Errorf("unexpected status code while fetching the track: %s", resp.Status)
 	}
 
-	var data utils.TrackInfo
-	if err = json.NewDecoder(resp.Body).Decode(&data); err != nil {
+	var stream nubStreamResponse
+	if err = json.NewDecoder(resp.Body).Decode(&stream); err != nil {
 		slog.Warn("Failed to decode the GetTrack response", "error", err)
 		return utils.TrackInfo{}, fmt.Errorf("failed to decode the GetTrack response: %w", err)
 	}
+	if stream.StreamURL == "" {
+		return utils.TrackInfo{}, fmt.Errorf("API returned no stream_url for %s", a.Query)
+	}
 
-	return data, nil
+	return utils.TrackInfo{
+		Id:       a.Query,
+		URL:      a.Query,
+		CdnURL:   stream.StreamURL,
+		Platform: utils.YouTube,
+	}, nil
 }
 
 // downloadTrack downloads a track using the API. If the track is a YouTube video and video format is requested,
